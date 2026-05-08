@@ -27,8 +27,8 @@ npm start -- --disable-gpu
 ## インストールと起動
 
 ```bash
-unzip projmap_studio.zip
-cd projmap
+git clone https://github.com/kolinz/projmap-studio.git
+cd projmap-studio
 npm install       # 初回のみ（数分かかります）
 npm start
 ```
