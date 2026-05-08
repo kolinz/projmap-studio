@@ -1,0 +1,17 @@
+{
+  "name": "projmap-studio",
+  "version": "0.1.0",
+  "description": "Projection Mapping Studio for Linux",
+  "main": "main.js",
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --inspect"
+  },
+  "devDependencies": {
+    "electron": "^42.0.0"
+  }
+}

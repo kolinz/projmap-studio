@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ProjMap Studio</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="toolbar">
+  <span class="logo">PROJMAP</span>
+  <button class="tbtn" id="pvBtn" onclick="togglePreview()">▶ PREVIEW</button>
+  <button class="tbtn red" id="boBtn" onclick="toggleBlackout()">■ BLACKOUT</button>
+  <div class="sep"></div>
+  <label style="font-size:8px;color:var(--dim);letter-spacing:1px">OUTPUT</label>
+  <select class="tbtn" id="outRes" onchange="changeRes(this.value)" style="font-family:var(--font)">
+    <option value="1920,1080">1920×1080</option>
+    <option value="1280,720">1280×720</option>
+    <option value="3840,2160">3840×2160</option>
+  </select>
+  <label style="font-size:8px;color:var(--dim);letter-spacing:1px">DISPLAY</label>
+  <select class="tbtn" id="dispSel" style="font-family:var(--font)"></select>
+  <div class="sp"></div>
+  <button class="tbtn" onclick="exportProj()">EXPORT</button>
+  <button class="tbtn" onclick="impIn.click()">IMPORT</button>
+  <input type="file" id="impIn" accept=".json" onchange="importProj(event)">
+</div>
+
+<div id="body">
+  <div id="sidebar">
+    <div class="s-body">
+
+      <!-- Surface list -->
+      <div>
+        <div class="sec">Surfaces</div>
+        <div id="list"></div>
+        <button class="btn a" onclick="addSurface()">+ Add Surface</button>
+      </div>
+
+      <!-- Properties (selected surface) -->
+      <div id="props" style="display:none">
+        <div class="sec">Source</div>
+        <label class="flabel" for="vidIn">📁 Load Video</label>
+        <input type="file" id="vidIn" accept="video/*" onchange="loadVideo(event)">
+        <button class="btn" style="margin-top:4px" onclick="useCamera()">📷 Live Camera</button>
+        <button class="btn" style="margin-top:4px" onclick="useScreenShare()">🖥 Screen Share</button>
+        <div id="vname" style="font-size:8px;color:var(--dim);padding:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+
+        <!-- Video playback controls (preview side が再生する) -->
+        <div id="videoControls" style="display:none;margin-top:6px">
+          <div class="sec">再生制御</div>
+          <div class="btn-row">
+            <button class="btn" onclick="vidCmd('play')">▶</button>
+            <button class="btn" onclick="vidCmd('pause')">⏸</button>
+            <button class="btn" onclick="vidCmd('restart')">⏮</button>
+          </div>
+        </div>
+
+        <div style="margin-top:8px">
+          <span class="fl">Opacity</span>
+          <input type="range" id="opa" min="0" max="100" value="100">
+        </div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn" onclick="resetPoints()">Reset</button>
+          <button class="btn r" onclick="delSel()">Delete</button>
+        </div>
+      </div>
+
+      <!-- Point coordinate editor -->
+      <div id="ptEditor" style="display:none">
+        <div class="sec">座標 · <span id="ptLabel" style="color:var(--accent)">--</span></div>
+        <div class="xy-row" style="margin-bottom:4px">
+          <span class="fl">X</span>
+          <input type="number" id="ptX" min="0" onchange="setPtCoord()">
+        </div>
+        <div class="xy-row">
+          <span class="fl">Y</span>
+          <input type="number" id="ptY" min="0" onchange="setPtCoord()">
+        </div>
+        <div style="font-size:7px;color:var(--dim);margin-top:4px">単位: 出力解像度 px</div>
+      </div>
+
+      <!-- 背景画像 -->
+      <div>
+        <div class="sec">背景画像</div>
+        <label class="flabel" for="bgIn">🏔 投影対象の写真を読み込む</label>
+        <input type="file" id="bgIn" accept="image/*" onchange="loadBgImage(event)">
+        <div id="bgControls" style="display:none">
+          <div style="margin-top:6px">
+            <span class="fl">不透明度</span>
+            <input type="range" id="bgOpa" min="0" max="100" value="70"
+              oninput="setBgOpacity(this.value)">
+          </div>
+          <button class="btn" style="margin-top:4px" onclick="clearBgImage()">背景をクリア</button>
+        </div>
+      </div>
+
+      <!-- View / Project -->
+      <div>
+        <div class="sec">View</div>
+        <button class="btn" id="pvBtn2" onclick="togglePreview()" style="border-color:var(--lime);color:var(--lime)">Preview Mode</button>
+      </div>
+      <div>
+        <div class="sec">Project</div>
+        <div class="btn-row">
+          <button class="btn" onclick="exportProj()">Export</button>
+          <button class="btn" onclick="impIn.click()">Import</button>
+        </div>
+      </div>
+
+      <div style="margin-top:auto;font-size:8px;color:var(--dim);line-height:1.9;border-top:1px solid var(--b1);padding-top:8px">
+        ● Corner: 四隅ワーピング<br>
+        ◆ Edge: 辺の湾曲<br>
+        Drag center: 移動<br>
+        Ctrl+Z / Ctrl+Shift+Z: Undo/Redo<br>
+        P: preview　N: new　B: blackout
+      </div>
+
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="checker"></div>
+    <img id="bgImg" alt="背景画像" style="display:none">
+    <canvas id="glc"></canvas>
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg" class="ed"></svg>
+    <div class="pill" id="pill">EDIT MODE</div>
+    <div id="sbar">
+      <span class="m" id="sm">EDIT</span>
+      <span id="st">サーフェスを追加してください</span>
+      <span id="sc" style="margin-left:auto"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Screen picker modal -->
+<div id="screenPicker" style="display:none" class="picker-overlay">
+  <div class="picker-backdrop" onclick="closeScreenPicker()"></div>
+  <div class="picker-dialog">
+    <div class="picker-header">
+      <span>🖥 SCREEN SHARE — 画面またはウィンドウを選択</span>
+      <span id="pickerLoading" style="color:var(--dim);font-size:8px">読み込み中...</span>
+    </div>
+    <div class="picker-grid" id="pickerGrid"></div>
+    <div class="picker-footer">
+      <button class="btn" style="width:auto;padding:5px 20px" onclick="closeScreenPicker()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
