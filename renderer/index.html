@@ -11,6 +11,7 @@
   <span class="logo">PROJMAP</span>
   <button class="tbtn" id="pvBtn" onclick="togglePreview()">▶ PREVIEW</button>
   <button class="tbtn red" id="boBtn" onclick="toggleBlackout()">■ BLACKOUT</button>
+  <button class="tbtn" id="snapBtn" onclick="toggleSnap()" title="グリッドスナップ (16分割)">SNAP</button>
   <div class="sep"></div>
   <label style="font-size:8px;color:var(--dim);letter-spacing:1px">OUTPUT</label>
   <select class="tbtn" id="outRes" onchange="changeRes(this.value)" style="font-family:var(--font)">
@@ -54,6 +55,10 @@
             <button class="btn" onclick="vidCmd('pause')">⏸</button>
             <button class="btn" onclick="vidCmd('restart')">⏮</button>
           </div>
+          <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:9px;color:var(--dim);cursor:pointer">
+            <input type="checkbox" id="loopCheck" checked onchange="setLoop(this.checked)">
+            ループ再生
+          </label>
         </div>
 
         <div style="margin-top:8px">
@@ -92,6 +97,32 @@
               oninput="setBgOpacity(this.value)">
           </div>
           <button class="btn" style="margin-top:4px" onclick="clearBgImage()">背景をクリア</button>
+        </div>
+      </div>
+
+      <!-- Audio (BGM) -->
+      <div>
+        <div class="sec">Audio</div>
+        <label class="btn" style="display:block;text-align:center;cursor:pointer">
+          🎵 Load Audio
+          <input type="file" id="audioFile" accept="audio/*" onchange="loadAudio(event)" hidden>
+        </label>
+        <div id="audioName" style="font-size:9px;color:var(--dim);margin-top:4px;word-break:break-all"></div>
+        <div id="audioControls" style="display:none;margin-top:6px">
+          <div class="btn-row">
+            <button class="btn" onclick="audioCmd('play')">▶</button>
+            <button class="btn" onclick="audioCmd('pause')">⏸</button>
+            <button class="btn" onclick="audioCmd('stop')">⏹</button>
+          </div>
+          <div style="margin-top:6px">
+            <span class="fl">Volume</span>
+            <input type="range" id="audioVol" min="0" max="100" value="80"
+                   oninput="setAudioVol(this.value)">
+          </div>
+          <label style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:9px;color:var(--dim);cursor:pointer">
+            <input type="checkbox" id="audioLoop" checked onchange="setAudioLoop(this.checked)">
+            ループ再生
+          </label>
         </div>
       </div>
 

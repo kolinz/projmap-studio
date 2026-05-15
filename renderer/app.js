@@ -18,6 +18,8 @@ let selPt       = null;   // 選択中ポイントインデックス (0–7)
 let edit        = true;
 let blackout    = false;
 let previewOpen = false;
+let snapOn      = false;  // グリッドスナップ
+const SNAP_DIV  = 16;     // 16分割 = 1920/16=120px, 1080/16=67.5px 間隔
 let nid         = 0;
 let outW        = OUT_W;  // 数値表示用の出力解像度 (レンダリングは [0,1] 正規化)
 let outH        = OUT_H;
@@ -171,6 +173,28 @@ const toS = ([u,v]) => [u * cvs.width, v * cvs.height];
 
 function drawOverlay() {
   const svg = document.getElementById('svg'); svg.innerHTML = '';
+  const W = cvs.width, H = cvs.height;
+
+  // グリッド線（スナップON時のみ表示）
+  if (snapOn) {
+    const ns = 'http://www.w3.org/2000/svg';
+    for (let i = 0; i <= SNAP_DIV; i++) {
+      const x = (i / SNAP_DIV) * W;
+      const y = (i / SNAP_DIV) * H;
+      const vl = document.createElementNS(ns, 'line');
+      vl.setAttribute('x1', x); vl.setAttribute('y1', 0);
+      vl.setAttribute('x2', x); vl.setAttribute('y2', H);
+      vl.setAttribute('stroke', 'rgba(0,229,255,0.15)');
+      vl.setAttribute('stroke-width', i % 4 === 0 ? '1' : '0.5');
+      svg.appendChild(vl);
+      const hl = document.createElementNS(ns, 'line');
+      hl.setAttribute('x1', 0);   hl.setAttribute('y1', y);
+      hl.setAttribute('x2', W);   hl.setAttribute('y2', y);
+      hl.setAttribute('stroke', 'rgba(0,229,255,0.15)');
+      hl.setAttribute('stroke-width', i % 4 === 0 ? '1' : '0.5');
+      svg.appendChild(hl);
+    }
+  }
   for (const surf of surfs) {
     const col = COLS[surf.id % COLS.length], sel = surf.id === selId;
     const SP  = surf.pts.map(toS);
@@ -220,6 +244,21 @@ function evToNorm(e) {
   return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height];
 }
 
+// グリッドスナップ: SNAP_DIV分割のグリッドに吸着
+function snapPt([u, v]) {
+  if (!snapOn) return [u, v];
+  return [
+    Math.round(u * SNAP_DIV) / SNAP_DIV,
+    Math.round(v * SNAP_DIV) / SNAP_DIV,
+  ];
+}
+
+// スナップ ON/OFF 切り替え
+function toggleSnap() {
+  snapOn = !snapOn;
+  document.getElementById('snapBtn').classList.toggle('on', snapOn);
+}
+
 function startDragPt(e, sid, pi) {
   e.preventDefault();
   if (selId !== sid) selPt = null;
@@ -228,7 +267,7 @@ function startDragPt(e, sid, pi) {
 
   const mv = ev => {
     const s = surfs.find(x => x.id === sid); if (!s) return;
-    s.pts[pi] = evToNorm(ev); s.dirty = true;
+    s.pts[pi] = snapPt(evToNorm(ev)); s.dirty = true;
     updatePtDisplay(s.pts[pi]);
   };
   const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
@@ -465,6 +504,43 @@ function vidCmd(cmd, value = null) {
   ipcRenderer.send('video-command', { command: cmd, value });
 }
 
+// ループ再生オンオフ
+function setLoop(on) {
+  const s = surfs.find(x => x.id === selId);
+  if (s && s.vid) s.vid.loop = on;
+}
+
+// ── Audio (BGM) ───────────────────────────────────────────────────────────────
+let audioEl        = null;
+let audioObjectUrl = null;
+
+function loadAudio(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+
+  // 既存を解放
+  if (audioEl) { audioEl.pause(); audioEl = null; }
+  if (audioObjectUrl) { URL.revokeObjectURL(audioObjectUrl); audioObjectUrl = null; }
+
+  audioObjectUrl = URL.createObjectURL(file);
+  audioEl = new Audio(audioObjectUrl);
+  audioEl.loop   = document.getElementById('audioLoop').checked;
+  audioEl.volume = document.getElementById('audioVol').value / 100;
+
+  document.getElementById('audioName').textContent = '🎵 ' + file.name;
+  document.getElementById('audioControls').style.display = 'block';
+  ev.target.value = '';
+}
+
+function audioCmd(cmd) {
+  if (!audioEl) return;
+  if (cmd === 'play')  audioEl.play().catch(e => console.warn('audio:', e));
+  if (cmd === 'pause') audioEl.pause();
+  if (cmd === 'stop')  { audioEl.pause(); audioEl.currentTime = 0; }
+}
+
+function setAudioLoop(on)  { if (audioEl) audioEl.loop = on; }
+function setAudioVol(val)  { if (audioEl) audioEl.volume = val / 100; }
+
 // ── 数値座標入力 ──────────────────────────────────────────────────────────────
 function updatePtDisplay(pt) {
   if (!pt) return;
@@ -675,6 +751,9 @@ function refreshUI() {
       document.getElementById('vname').textContent = vn;
     document.getElementById('videoControls').style.display =
       sel.srcType === 'video' ? 'block' : 'none';
+    if (sel.srcType === 'video' && sel.vid) {
+      document.getElementById('loopCheck').checked = sel.vid.loop;
+    }
   }
 
   const ptEditor = document.getElementById('ptEditor');
